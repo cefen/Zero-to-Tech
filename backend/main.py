@@ -110,5 +110,7 @@ async def analyze(req: AnalyzeRequest):  # 1. 改为 async 异步函数，提升
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"调用 AI 服务失败: {str(e)}")
 
+
+# 运行: uvicorn main:app --reload --host 127.0.0.1 --port 8000
 # 样例: Windows : curl.exe -X POST "http://127.0.0.1:8000/api/analyze" -H "Content-Type: application/json" -d "{\"text\":\"今天学习了 FastAPI，感觉非常好用！\"}"
 # Linux : curl -X POST "http://127.0.0.1:8000/api/analyze" \ -H "Content-Type: application/json" \ -d '{"text":"今天学习了 FastAPI，感觉非常好用！"}'z
