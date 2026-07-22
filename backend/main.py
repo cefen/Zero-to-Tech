@@ -19,12 +19,12 @@ app.add_middleware(
     allow_headers=["*"],  # 允许所有请求头
 )
 
+# 建议优先将 API Key 存放在环境变量中：export DEEPSEEK_API_KEY="sk-xxx"
 api_key = os.getenv("DEEPSEEK_API_KEY")
 if not api_key:
     raise RuntimeError("未检测到 DEEPSEEK_API_KEY，请检查 .env 文件设置！")
 
 # 初始化 OpenAI 客户端（这里以 DeepSeek 为例，可换成 OpenAI/Qwen 等任何兼容接口）
-# 建议优先将 API Key 存放在环境变量中：export DEEPSEEK_API_KEY="sk-xxx"
 client = AsyncOpenAI(
     api_key=api_key,
     base_url="https://api.deepseek.com"  # 若用 OpenAI 原生接口，去掉 base_url 即可
