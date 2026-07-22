@@ -1,0 +1,497 @@
+/* ============================================================
+ * 因式分解掉落版 · 样式（作用域版）
+ * ------------------------------------------------------------
+ * 原 works/DIVgame.html 里样式写在 <style>，并且直接改 body/html。
+ * 接到 Next.js 后绝不能再全局改 body：会把整站（首页、文字实验室）搞乱。
+ * 做法：所有选择器都挂在 .factor-game-root 下面，只影响游戏这一块。
+ * ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Orbitron:wght@800;900&display=swap");
+
+ .factor-game-root {
+    --fg-primary: #4a90e2;
+    --fg-danger: #e94e77;
+    --fg-success: #50e3c2;
+    --fg-bg-gradient: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+    --fg-glass-bg: rgba(255, 255, 255, 0.1);
+    --fg-glass-border: rgba(255, 255, 255, 0.2);
+  
+    position: relative;
+    /* 游戏区要有固定可视高度，掉落才有「掉出屏幕」的感觉 */
+    min-height: min(78vh, 720px);
+    height: min(78vh, 720px);
+    border-radius: var(--radius-panel, 28px);
+    overflow: hidden;
+    color: #fff;
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--fg-bg-gradient);
+    background-size: 400% 400%;
+    animation: fg-gradient 15s ease infinite;
+  }
+  
+  @keyframes fg-gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  .factor-game-root #game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .factor-game-root #ui-overlay {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    justify-content: space-between;
+    z-index: 10;
+    pointer-events: none; /* 分数/计时不挡点击 */
+  }
+  
+  .factor-game-root .stat-card {
+    background: var(--fg-glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--fg-glass-border);
+    padding: 10px 20px;
+    border-radius: 15px;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .factor-game-root .score-range {
+    font-size: 0.78rem;
+    opacity: 0.75;
+    margin-left: 2px;
+  }
+  
+  .factor-game-root #game-board {
+    position: relative;
+    width: 100%;
+    flex-grow: 1;
+    overflow: hidden;
+  }
+  
+  .factor-game-root .equation-item {
+    position: absolute;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    padding: 20px;
+    min-width: 180px;
+    min-height: 80px;
+    text-align: center;
+    box-sizing: border-box;
+    word-break: break-all;
+    line-height: 1.2;
+  }
+  
+  .factor-game-root .equation-item:hover {
+    transform: scale(1.1);
+  }
+  
+  .factor-game-root .shape-bubble {
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1));
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  }
+  
+  .factor-game-root .shape-rect {
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+  
+  .factor-game-root .shape-square {
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+  
+  .factor-game-root .shape-diamond {
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 30px !important;
+  }
+  
+  .factor-game-root .shape-trapezoid {
+    clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%);
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding-top: 25px !important;
+  }
+  
+  .factor-game-root .explosion,
+  .factor-game-root .success-burst {
+    position: absolute;
+    pointer-events: none;
+    width: 200px;
+    height: 200px;
+    z-index: 100;
+  }
+  
+  .factor-game-root .particle {
+    position: absolute;
+    background: #ff4d4d;
+    border-radius: 50%;
+    animation: fg-explode 0.8s ease-out forwards;
+    box-shadow: 0 0 10px #ff4d4d, 0 0 20px #ff0000;
+  }
+  
+  .factor-game-root .success-particle {
+    position: absolute;
+    background: #50e3c2;
+    border-radius: 2px;
+    animation: fg-explode 0.8s ease-out forwards;
+    box-shadow: 0 0 10px #50e3c2, 0 0 20px #4a90e2;
+  }
+  
+  @keyframes fg-explode {
+    0% {
+      transform: translate(0, 0) scale(1);
+      opacity: 1;
+      filter: brightness(2);
+    }
+    100% {
+      transform: translate(var(--tx), var(--ty)) scale(0);
+      opacity: 0;
+      filter: brightness(1);
+    }
+  }
+  
+  .factor-game-root .flash {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 50%;
+    animation: fg-flashAnim 0.3s ease-out forwards;
+    pointer-events: none;
+  }
+  
+  .factor-game-root .flash-success {
+    background: #50e3c2;
+  }
+  
+  @keyframes fg-flashAnim {
+    0% { transform: scale(0); opacity: 1; }
+    100% { transform: scale(2); opacity: 0; }
+  }
+  
+  /* 通关烟花挂在游戏根节点上，避免污染 document.body */
+  .factor-game-root .celebration-particle {
+    position: absolute;
+    border-radius: 50%;
+    animation: fg-celebrate 1.5s ease-out forwards;
+    pointer-events: none;
+    z-index: 1002;
+  }
+  
+  @keyframes fg-celebrate {
+    0% {
+      transform: translate(0, 0) scale(1) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(var(--tx), var(--ty)) scale(0) rotate(360deg);
+      opacity: 0;
+    }
+  }
+  
+  .factor-game-root #bottom-panel {
+    position: absolute;
+    bottom: 16px;
+    width: 90%;
+    max-width: 600px;
+    background: var(--fg-glass-bg);
+    backdrop-filter: blur(15px);
+    border: 1px solid var(--fg-glass-border);
+    border-radius: 20px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 20;
+  }
+  
+  .factor-game-root #history-list {
+    width: 100%;
+    max-height: 120px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+  }
+  
+  .factor-game-root .history-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .factor-game-root button {
+    background: var(--fg-danger);
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.3s;
+  }
+  
+  .factor-game-root button:hover {
+    background: #c73e63;
+  }
+  
+  .factor-game-root #start-overlay,
+  .factor-game-root #game-over-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    text-align: center;
+    padding: 24px;
+  }
+  
+  .factor-game-root #game-over-overlay {
+    z-index: 1001;
+  }
+
+  .factor-game-root .rule-list {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    max-width: 360px;
+    text-align: left;
+    line-height: 1.7;
+    opacity: 0.95;
+  }
+
+  .factor-game-root .rule-list li {
+    margin: 4px 0;
+  }
+
+  .factor-game-root .final-time {
+    margin: 8px 0 16px;
+    font-size: 1.15rem;
+  }
+
+  .factor-game-root .stats-list {
+    list-style: none;
+    margin: 0;
+    padding: 14px 18px;
+    width: min(360px, 92%);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+  }
+
+  .factor-game-root .stats-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .factor-game-root .stats-list li:last-child {
+    border-bottom: none;
+  }
+
+  .factor-game-root .stats-label {
+    opacity: 0.85;
+    font-size: 0.95rem;
+    text-align: left;
+  }
+
+  .factor-game-root .stats-value {
+    font-weight: 700;
+    font-size: 1.15rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .factor-game-root .stats-hint {
+    margin: 12px 0 0;
+    max-width: 360px;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    opacity: 0.7;
+  }
+
+  /* —— 结算：公共抬头 —— */
+  .factor-game-root .outcome-kicker {
+    margin: 0 0 6px;
+    font-size: 0.85rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    opacity: 0.85;
+  }
+
+  .factor-game-root .outcome-kicker-fail {
+    color: #ffeb3b;
+    letter-spacing: 0.2em;
+  }
+
+  .factor-game-root .outcome-subtitle {
+    margin: 0 0 14px;
+    max-width: 420px;
+    line-height: 1.45;
+  }
+
+  .factor-game-root .final-score-tag {
+    opacity: 0.75;
+    font-size: 0.95rem;
+  }
+
+  /* —— 成功通关：金榜 / 霓虹荣耀 —— */
+  .factor-game-root #game-over-overlay.outcome-win {
+    background:
+      radial-gradient(ellipse at 50% 20%, rgba(255, 215, 0, 0.28), transparent 55%),
+      rgba(0, 0, 0, 0.82);
+  }
+
+  .factor-game-root .outcome-title-win {
+    margin: 0 0 10px;
+    font-family: "Orbitron", "Arial Black", "Helvetica Neue", sans-serif;
+    font-weight: 900;
+    font-style: italic;
+    font-size: clamp(1.7rem, 5.5vw, 2.6rem);
+    letter-spacing: 0.02em;
+    line-height: 1.15;
+    background: linear-gradient(
+      115deg,
+      #fff8dc 0%,
+      #ffd700 28%,
+      #7dffb3 62%,
+      #ffe566 100%
+    );
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.75))
+      drop-shadow(0 0 28px rgba(80, 227, 194, 0.45));
+    animation: fg-goldShimmer 2.8s ease-in-out infinite;
+  }
+
+  .factor-game-root .outcome-subtitle-win {
+    font-family: "Orbitron", "Helvetica Neue", sans-serif;
+    font-weight: 800;
+    font-style: italic;
+    font-size: clamp(0.85rem, 2.4vw, 1.05rem);
+    color: #ffe9a8;
+    text-shadow: 0 0 12px rgba(255, 215, 0, 0.55);
+  }
+
+  @keyframes fg-goldShimmer {
+    0%,
+    100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* —— 失败结算：刺眼嘲讽 —— */
+  .factor-game-root #game-over-overlay.outcome-fail {
+    background:
+      radial-gradient(ellipse at 50% 15%, rgba(255, 60, 60, 0.35), transparent 50%),
+      rgba(20, 0, 0, 0.88);
+  }
+
+  .factor-game-root .outcome-title-fail {
+    margin: 4px 0 12px;
+    font-family: "Comic Sans MS", "Comic Sans", "Bangers", cursive;
+    font-weight: 700;
+    font-style: italic;
+    font-size: clamp(1.85rem, 6vw, 2.85rem);
+    line-height: 1.1;
+    color: #ff1744;
+    text-shadow:
+      3px 3px 0 #ffeb3b,
+      -2px 2px 0 #ff9800,
+      0 0 18px rgba(255, 23, 68, 0.85),
+      4px 6px 0 rgba(0, 0, 0, 0.45);
+    transform: rotate(-3deg);
+    animation: fg-mockShake 0.45s ease-in-out infinite;
+  }
+
+  .factor-game-root .outcome-subtitle-fail {
+    font-family: "Comic Sans MS", "Comic Sans", cursive;
+    font-size: 0.98rem;
+    color: #ffeb3b;
+    transform: rotate(1.5deg);
+    text-shadow: 1px 1px 0 #c62828;
+  }
+
+  @keyframes fg-mockShake {
+    0%,
+    100% { transform: rotate(-3deg) translateX(0); }
+    25% { transform: rotate(-4.5deg) translateX(-2px); }
+    50% { transform: rotate(-1.5deg) translateX(2px); }
+    75% { transform: rotate(-3.8deg) translateX(-1px); }
+  }
+
+  .factor-game-root .btn-retry-fail {
+    background: #ff1744 !important;
+    box-shadow: 0 0 16px rgba(255, 23, 68, 0.55);
+  }
+
+  .factor-game-root .btn-retry-fail:hover {
+    background: #d50000 !important;
+  }
+  
+  .factor-game-root .btn-start {
+    background: var(--fg-success);
+    font-size: 1.35rem;
+    padding: 15px 40px;
+    margin-top: 20px;
+  }
+  
+  .factor-game-root .score-anim {
+    animation: fg-scorePop 0.3s ease-out;
+  }
+  
+  @keyframes fg-scorePop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  
+  /* 小屏：略矮一点，历史区更紧凑 */
+  @media (max-width: 640px) {
+    .factor-game-root {
+      min-height: 70vh;
+      height: 70vh;
+    }
+  
+    .factor-game-root .stat-card {
+      font-size: 0.95rem;
+      padding: 8px 12px;
+    }
+  
+    .factor-game-root #history-list {
+      max-height: 80px;
+    }
+  }
+  
